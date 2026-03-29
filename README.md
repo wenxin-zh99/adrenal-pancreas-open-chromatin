@@ -1,176 +1,108 @@
-# Comparative Epigenomics of Open Chromatin in Human and Mouse: Adrenal Gland and Pancreas
+# Cross-Species OCR Mapping Pipeline for Pancreas
 
-## Project Overview
+This repository now contains a reproducible Task 2 pipeline for building a cross-species open chromatin region (OCR) map between human and mouse pancreas ATAC-seq peak sets.
 
-This project investigates the conservation and divergence of regulatory DNA (open chromatin regions, OCRs) between human and mouse in two tissues: **adrenal gland** and **pancreas**. Using ATAC-seq–derived OCRs, we aim to:
+The implementation is intentionally scoped to Task 2 only. It prepares standardized OCR peak files, performs optional lightweight annotation, runs HAL-based cross-species liftover, classifies orthologous versus non-orthologous OCRs, and writes downstream-friendly tables and figures for later team tasks.
 
-- Evaluate dataset quality and select the best tissue for downstream analysis
-- Map regulatory regions across species
-- Identify conserved vs species-specific OCRs
-- Interpret the biological functions regulated by these regions
-- Compare promoter-like and enhancer-like OCRs
-- Discover transcription factors (TFs) that may drive tissue-specific regulatory programs
+## Current Scope
 
-The project is structured as a reproducible, multi-step computational pipeline, with clear division of labor and deliverables for each team member.
+Implemented here:
+- Locate human and mouse pancreas peak files from the course data root
+- Standardize peak files into clean OCR tables and BED outputs
+- Optionally annotate OCRs with nearest gene and promoter/distal labels
+- Lift OCRs between species using a HAL alignment via `halLiftover`
+- Build orthologous and species-specific OCR outputs
+- Write summary tables, figures, logs, and reproducible metadata
 
----
+Not implemented here:
+- Task 3 conserved-vs-species-specific biological interpretation
+- Task 4 GO or pathway enrichment
+- Task 5 promoter-vs-enhancer downstream analysis beyond simple labels
+- Task 6 TF motif analysis
 
-## Directory Structure
+## Default Data Inputs
+
+The default pancreas inputs are configured to use the reproducible IDR optimal peak calls:
+
+- Human: `/ocean/projects/bio230007p/ikaplow/HumanAtac/Pancreas/peak/idr_reproducibility/idr.optimal_peak.narrowPeak.gz`
+- Mouse: `/ocean/projects/bio230007p/ikaplow/MouseAtac/Pancreas/peak/idr_reproducibility/idr.optimal_peak.narrowPeak.gz`
+- HAL alignment: `/ocean/projects/bio230007p/ikaplow/Alignments/10plusway-master.hal`
+
+HAL species names in the provided alignment are configured as `Human` and `Mouse`.
+
+## Repository Layout
 
 ```
-project_root/
-│
-├── config/                  # Configuration files (YAML, etc.)
-│   └── project_config.example.yaml
-│
-├── data/                    # Raw and processed data
-│   ├── Alignments/          # Multi-species alignments (HAL, etc.)
-│   ├── CIS-BP_2.00/         # TF motif data
-│   ├── external/            # External resources
-│   ├── HumanAtac/           # Human ATAC-seq data
-│   ├── HumanGenomeInfo/     # Human genome info
-│   ├── interim/             # Intermediate files
-│   ├── metadata/            # Metadata files
-│   ├── MouseAtac/           # Mouse ATAC-seq data
-│   ├── MouseGenomeInfo/     # Mouse genome info
-│   ├── processed/           # Processed data
-│   ├── raw/                 # Raw data
-│
-├── docs/                    # Project documentation
-│   ├── methods.md
-│   ├── project_overview.md
-│   ├── repo_conventions.md
-│   └── task1_qc_workflow.md
-│
-├── notebooks/               # Jupyter notebooks for analysis
-│
-├── results/                 # Output results
-│   ├── annotations/
-│   ├── figures/
-│   ├── logs/
-│   ├── mapping/
-│   ├── qc/
-│   ├── tables/
-│
-├── scripts/                 # Standalone scripts
-│
-├── src/                     # Source code (modules, pipeline)
-│
-├── tests/                   # Unit and integration tests
-│
-├── .github/                 # GitHub workflows, issue templates
-├── .gitignore
-├── main.py                  # Main entry point (if needed)
-├── project.code-workspace   # VS Code workspace settings
-├── README.md                # This file
-└── requirements.txt         # Python dependencies
+config/
+  task2_pancreas_mapping.yaml
+docs/
+  task2_cross_species_mapping.md
+scripts/
+  run_task2_pancreas_mapping.py
+src/cross_species_ocr/
+  __init__.py
+  annotation.py
+  cli.py
+  config.py
+  intervals.py
+  logging_utils.py
+  mapping.py
+  peaks.py
+  pipeline.py
+  reporting.py
+tests/
+  test_standardize.py
+results/
+  mapping/
+  tables/
+  figures/
+  logs/
 ```
 
----
+## Environment
 
-## Data Resources
+Python dependencies are listed in `requirements.txt`. The mapping step also requires an external HAL executable:
 
-- **Human ATAC-seq**: `/ocean/projects/bio230007p/ikaplow/HumanAtac`
-- **Mouse ATAC-seq**: `/ocean/projects/bio230007p/ikaplow/MouseAtac`
-- **Human genome info**: `/ocean/projects/bio230007p/ikaplow/HumanGenomeInfo`
-- **Mouse genome info**: `/ocean/projects/bio230007p/ikaplow/MouseGenomeInfo`
-- **Multi-species alignments**: `/ocean/projects/bio230007p/ikaplow/Alignments`
-- **TF motif data**: `/ocean/projects/bio230007p/ikaplow/CIS-BP_2.00`
+- `halLiftover`
 
----
+If `halLiftover` is not already on `PATH`, load the appropriate module or supply an explicit binary path in the YAML config.
 
-## Project Phases and Tasks
+## How To Run
 
-### Phase 1: Data Quality Evaluation
+1. Create or activate your Python environment.
+2. Adjust `config/task2_pancreas_mapping.yaml` only if you need non-default inputs or output paths.
+3. Run input discovery:
 
-- **Goal:** Assess the quality of each ATAC-seq dataset (human/mouse, adrenal/pancreas) and select the best tissue for downstream analysis.
-- **QC metrics:** Mapping rates, read length, nucleosomal patterning, number of peaks, TSS enrichment, read depth, reproducibility, IDR peaks, biological plausibility.
-- **Deliverable:** Written report section with figures/tables and tissue selection rationale.
+```bash
+PYTHONPATH=src python3 scripts/run_task2_pancreas_mapping.py discover --config config/task2_pancreas_mapping.yaml
+```
 
-### Phase 2: Downstream Biological Analysis
+4. Run the full Task 2 pipeline:
 
-#### Task 2: Build a Cross-Species OCR Map
-- Map and annotate OCRs in human and mouse for the selected tissue
-- Generate a unified cross-species map using tools like `halLiftover` and `HALPER`
+```bash
+PYTHONPATH=src python3 scripts/run_task2_pancreas_mapping.py run --config config/task2_pancreas_mapping.yaml
+```
 
-#### Task 3: Compare OCRs Between Species
-- Classify OCRs as conserved or species-specific
-- Quantify conservation and divergence
+5. If you want to validate preprocessing before HAL mapping is available:
 
-#### Task 4: Biological Process Enrichment
-- Link OCRs to genes
-- Perform GO/pathway enrichment (preferably using GREAT/rGREAT logic)
+```bash
+PYTHONPATH=src python3 scripts/run_task2_pancreas_mapping.py run --config config/task2_pancreas_mapping.yaml --skip-mapping
+```
 
-#### Task 5: Promoter vs Enhancer Analysis
-- Classify OCRs as promoter-like or enhancer-like (e.g., by distance to TSS)
-- Compare conservation and gene associations
+## Main Outputs
 
-#### Task 6: Transcription Factor Analysis
-- Motif enrichment/footprinting to identify TFs binding OCRs
-- Integrate with conservation and regulatory class analyses
+- `results/mapping/human_pancreas_ocr.processed.bed`
+- `results/mapping/mouse_pancreas_ocr.processed.bed`
+- `results/mapping/human_pancreas_ocr.processed.tsv`
+- `results/mapping/mouse_pancreas_ocr.processed.tsv`
+- `results/mapping/orthologous_ocr_pairs.tsv`
+- `results/mapping/human_non_orthologous_ocr.tsv`
+- `results/mapping/mouse_non_orthologous_ocr.tsv`
+- `results/tables/task2_mapping_summary.tsv`
+- `results/figures/task2_mapping_counts.png`
+- `results/figures/task2_mapping_rates.png`
+- `results/logs/task2_pancreas_mapping.log`
 
----
+## Design Notes
 
-## Workflow Summary
-
-1. **QC all four datasets** (human/mouse × adrenal/pancreas)
-2. **Select best tissue** for downstream analysis
-3. **Map OCRs across species** (build cross-species regulatory map)
-4. **Classify OCRs** (conserved vs species-specific)
-5. **Biological interpretation** (GO/pathway enrichment)
-6. **Promoter vs enhancer comparison**
-7. **TF motif/footprinting analysis**
-8. **Integrate results into a final report**
-
----
-
-## Best Practices
-
-- Use version control (Git) for all code and documentation
-- Document all scripts, parameters, and intermediate files
-- Use config files for reproducibility
-- Keep raw data immutable; all processing should be reproducible from scripts
-- Organize results and figures for easy integration into the final report
-- Write clear, modular code and notebooks
-- Use environment management (e.g., `requirements.txt`, conda) to ensure reproducibility
-
----
-
-## Getting Started
-
-1. **Clone the repository:**
-  ```bash
-  git clone <repo_url>
-  cd adrenal-pancreas-open-chromatin
-  ```
-2. **Set up the environment:**
-  ```bash
-  python3 -m venv env
-  source env/bin/activate
-  pip install -r requirements.txt
-  ```
-3. **Configure project settings:**
-  - Copy `config/project_config.example.yaml` to `config/project_config.yaml` and edit as needed.
-4. **Run analyses:**
-  - Follow the documentation in `docs/` and notebooks in `notebooks/` for each project phase.
-
----
-
-## Contributing
-
-- Use feature branches and pull requests for all changes
-- Write informative commit messages
-- Add/modify tests as needed
-- Keep documentation up to date
-
----
-
-## Contact
-
-For questions, contact the project team via the repository issues or your course communication channel.
-
----
-
-## License
-
-This project is for educational purposes as part of a comparative epigenomics course. Please cite appropriately if reusing code or analyses.
+The pipeline keeps Task 2 outputs easy to reuse later by preserving stable OCR IDs, genomic coordinates, optional nearest-gene annotations, and explicit mapping-status labels.
