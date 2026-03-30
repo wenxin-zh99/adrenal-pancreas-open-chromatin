@@ -72,7 +72,6 @@ poetry.lock
 
 # Data, results, and logs
 /data/
-/results/
 /logs/
 *.log
 *.out
