@@ -1,0 +1,10 @@
+metric	value
+human_total	89476.0
+mouse_total	47189.0
+human_lifted	71464.0
+mouse_lifted	39878.0
+orthologous_pairs	2566.0
+human_non_orthologous	87261.0
+mouse_non_orthologous	44979.0
+human_orthologous_rate	0.02475524162904019
+mouse_orthologous_rate	0.046832948356608534

@@ -1,126 +1,153 @@
 # Task 2 Progress Report: Cross-Species OCR Mapping in Pancreas
 
-Generated on 2026-03-27.
+Updated on 2026-03-30.
 
 ## Status
 
-Task 2 is partially complete.
+Task 2 is complete.
 
 Completed now:
 - Project scaffold for Task 2 is in place.
 - Human and mouse pancreas OCR inputs are configured and automatically discovered.
 - Peak standardization is implemented and verified.
 - Optional lightweight annotation is implemented and verified.
-- Logging, config support, manifests, and output directories are implemented.
-- The HAL-based mapping step is implemented in code.
-- The full pipeline entry point is wired up.
+- HAL-based cross-species liftover completed in both directions.
+- Orthologous and non-orthologous OCR outputs were generated.
+- Mapping summary tables and figures were generated.
+- Logging, config support, manifests, and job script support are in place.
 
-Not yet completed in a successful end-to-end run:
-- Human-to-mouse liftover execution
-- Mouse-to-human liftover execution
-- Orthologous OCR table generation
-- Human non-orthologous OCR table generation
-- Mouse non-orthologous OCR table generation
-- Mapping summary TSV and summary figures
+## Final Run Summary
+
+The full Task 2 pipeline completed successfully on an `RM-shared` node after configuring the explicit course-space HAL binary:
+
+- `halLiftover`: `/ocean/projects/bio230007p/gdu1/repos/hal/bin/halLiftover`
+- HAL file: `/ocean/projects/bio230007p/ikaplow/Alignments/10plusway-master.hal`
+- HAL species names verified with `halStats`: `Human`, `Mouse`
+- Slurm job ID: `38273968`
+
+The log confirms the following milestones:
+- human pancreas OCR preprocessing completed
+- mouse pancreas OCR preprocessing completed
+- `human -> mouse` HAL liftover completed
+- `mouse -> human` HAL liftover completed
+- reciprocal mapping and summary output generation completed
 
 ## What Was Verified
 
-The following commands were run successfully from the project directory:
+The following command classes were verified successfully:
 
 ```bash
 PYTHONPATH=src python3 -m py_compile scripts/run_task2_pancreas_mapping.py src/cross_species_ocr/*.py
 PYTHONPATH=src python3 scripts/run_task2_pancreas_mapping.py discover --config config/task2_pancreas_mapping.yaml
 PYTHONPATH=src python3 scripts/run_task2_pancreas_mapping.py run --config config/task2_pancreas_mapping.yaml --skip-mapping
+python3 scripts/run_task2_pancreas_mapping.py run --config config/task2_pancreas_mapping.yaml
 ```
 
-The preprocessing-only run completed successfully on the real pancreas datasets.
+The full end-to-end run was executed through Slurm on `RM-shared` using the repository job script.
 
-## Current Processed Outputs
+## Final Outputs
 
 Generated and present now:
 - `results/mapping/human_pancreas_ocr.processed.bed`
 - `results/mapping/mouse_pancreas_ocr.processed.bed`
 - `results/mapping/human_pancreas_ocr.processed.tsv`
 - `results/mapping/mouse_pancreas_ocr.processed.tsv`
+- `results/mapping/orthologous_ocr_pairs.tsv`
+- `results/mapping/human_non_orthologous_ocr.tsv`
+- `results/mapping/mouse_non_orthologous_ocr.tsv`
+- `results/mapping/tmp/human_to_mouse.lifted.bed`
+- `results/mapping/tmp/mouse_to_human.lifted.bed`
 - `results/tables/task2_input_manifest.tsv`
+- `results/tables/task2_mapping_summary.tsv`
+- `results/figures/task2_mapping_counts.png`
+- `results/figures/task2_mapping_rates.png`
 - `results/logs/task2_pancreas_mapping.log`
+- `results/logs/task2_pancreas_mapping.38273968.err`
+- `results/logs/task2_pancreas_mapping.38273968.out`
 
-## Current Counts
+## Final Counts
 
-After standardization and duplicate cleanup:
+### Processed OCR totals
+
 - Human pancreas OCRs: 89,476
 - Mouse pancreas OCRs: 47,189
 
-These counts are lower than the raw line counts in the compressed input files because the pipeline removes duplicate coordinate rows and invalid intervals.
+### Lifted OCR totals
+
+- Human OCRs with at least one liftover result: 71,464
+- Mouse OCRs with at least one liftover result: 39,878
+
+### Ortholog mapping summary
+
+- Orthologous OCR pairs: 2,566
+- Human non-orthologous OCRs: 87,261
+- Mouse non-orthologous OCRs: 44,979
+- Human orthologous rate: 0.02475524162904019
+- Mouse orthologous rate: 0.046832948356608534
+
+## Non-Orthologous Breakdown
+
+### Human non-orthologous OCRs
+
+- `no_target_overlap`: 66,010
+- `no_liftover`: 18,012
+- `non_reciprocal_best_hit`: 3,239
+
+### Mouse non-orthologous OCRs
+
+- `no_target_overlap`: 36,816
+- `no_liftover`: 7,311
+- `non_reciprocal_best_hit`: 852
 
 ## Inputs In Use
 
-Configured defaults:
+Configured defaults used for the completed run:
 - Human peaks: `/ocean/projects/bio230007p/ikaplow/HumanAtac/Pancreas/peak/idr_reproducibility/idr.optimal_peak.narrowPeak.gz`
 - Mouse peaks: `/ocean/projects/bio230007p/ikaplow/MouseAtac/Pancreas/peak/idr_reproducibility/idr.optimal_peak.narrowPeak.gz`
 - HAL alignment: `/ocean/projects/bio230007p/ikaplow/Alignments/10plusway-master.hal`
 - Human TSS bed: `/ocean/projects/bio230007p/ikaplow/HumanGenomeInfo/gencode.v27.annotation.protTranscript.TSSsWithStrand_sorted.bed`
 - Mouse TSS bed: `/ocean/projects/bio230007p/ikaplow/MouseGenomeInfo/gencode.vM15.annotation.protTranscript.geneNames_TSSWithStrand_sorted.bed`
+- HAL liftover binary: `/ocean/projects/bio230007p/gdu1/repos/hal/bin/halLiftover`
 
-HAL species names configured in YAML:
-- `Human`
-- `Mouse`
+## Caveats
 
-## Caveats Right Now
+### 1. Ortholog calls are conservative
 
-### 1. Main blocker: `halLiftover` is not available on PATH
+The current pipeline uses reciprocal best-hit overlap after HAL liftover rather than HALPER post-processing. This gives a clean, reproducible Task 2 result, but it is a conservative strategy and may under-call orthologous OCRs compared with a more lecture-aligned `halLiftover + HALPER` workflow.
 
-The full pipeline was run and stopped at the mapping stage with this effective blocker:
-- `RuntimeError: halLiftover is not available on PATH.`
+### 2. Many liftover results do not overlap target OCRs
 
-This means the code is ready to attempt mapping, but the required external HAL executable is not currently visible in this session.
+The largest non-orthologous category in both species is `no_target_overlap`. This means many successfully lifted regions do not intersect a called OCR in the other species under the current overlap threshold and matching logic.
 
-### 2. End-to-end Task 2 is not fully finished yet
+### 3. Annotation is lightweight by design
 
-The project is not fully done because the actual cross-species mapping outputs have not been produced yet. The implemented code path is there, but the environment dependency still needs to be resolved.
+Nearest-gene and promoter/distal labels are included only to make downstream team tasks easier. They are not a substitute for later enrichment, promoter-enhancer, or TF analyses.
 
-### 3. Mapping logic is conservative by design
+### 4. Temporary liftover files are retained
 
-The current implementation calls orthologous OCRs using reciprocal best-hit overlap after liftover. That is a reasonable Task 2 default, but if your team later wants a looser or stricter definition, the overlap threshold and matching logic can be adjusted in the YAML or code.
+The lifted BED outputs in `results/mapping/tmp/` were kept for traceability and debugging. They can be removed later if you want a cleaner final output directory.
 
-### 4. Annotation is intentionally lightweight
+## Interpretation
 
-Nearest-gene and promoter/distal labels are included to help later tasks, but this is not meant to replace downstream enrichment, promoter-enhancer analysis, or motif analysis.
+This Task 2 deliverable is now complete and usable for downstream project tasks. The pipeline successfully produced:
+- a standardized human pancreas OCR set
+- a standardized mouse pancreas OCR set
+- a unified orthologous OCR table
+- human-specific OCR output
+- mouse-specific OCR output
+- summary tables and figures for project reporting
 
-## What I Need From You To Finish The Full Run
-
-I do need one thing from you before I can finish the full end-to-end run:
-- access to `halLiftover`, either by
-  - telling me the correct module to load on Bridges-2, or
-  - giving me the full path to the `halLiftover` executable, or
-  - confirming the command you normally use to access HAL tools on a regular memory node
-
-Once that is available, I can run the full Task 2 pipeline and generate:
-- orthologous OCR pairs
-- species-specific OCR tables
-- mapping summary TSV
-- summary figures
-
-## Is The Task Done Already?
-
-Not fully.
-
-What is done:
-- the Task 2 scaffold
-- preprocessing and annotation
-- verified runnable CLI
-- verified processed OCR outputs
-- verified clean failure mode when HAL mapping is unavailable
-
-What is not done:
-- the actual cross-species OCR mapping results
+The relatively low orthologous rates suggest that the current mapping criteria are fairly strict, which is scientifically defensible for a first-pass Task 2 deliverable but worth noting in the methods and discussion.
 
 ## Recommended Next Step
 
-After `halLiftover` is available, run:
+For the team project, the next step is to use:
+- `results/mapping/orthologous_ocr_pairs.tsv`
+- `results/mapping/human_non_orthologous_ocr.tsv`
+- `results/mapping/mouse_non_orthologous_ocr.tsv`
 
-```bash
-PYTHONPATH=src python3 scripts/run_task2_pancreas_mapping.py run --config config/task2_pancreas_mapping.yaml
-```
-
-If that should run on a regular memory node, the same command can be placed into a job script once the HAL environment is known.
+as the starting point for:
+- Task 3 conserved vs species-specific OCR comparison
+- Task 4 GO or pathway enrichment
+- Task 5 promoter vs enhancer comparison
+- Task 6 TF motif analysis
