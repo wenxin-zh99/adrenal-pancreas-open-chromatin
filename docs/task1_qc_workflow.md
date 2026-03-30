@@ -1,43 +1,34 @@
-# Phase 1 Task 1: Human Adrenal Gland QC Workflow
+# Phase 1 Task 1: Human and Mouse Pancreas & Adrenal QC Workflow
 
-## Workflow Steps
+## Completed Workflow Steps
 
-1. **Data Inventory**
-   - Scan configured directories for candidate human adrenal gland open chromatin files
-   - Prefer alternative adrenal dataset if available
-   - Write a TSV inventory of candidate files
+### 1. Data Inventory and Selection
+* Scanned directories for human and mouse open chromatin datasets for the assigned tissues: **adrenal alternative** and **pancreas**.  
 
-2. **Candidate File Selection**
-   - Use filename heuristics and metadata to identify likely human adrenal gland files
-   - Mark TODOs where filenames need confirmation
+### 2. QC Evaluation Using Provided Metrics
+* Assessed dataset quality based on the provided QC metrics, including:  
+  * % mapped reads  
+  * % properly paired reads  
+  * Fragment periodicity  
+  * Transcription Start Site (TSS) enrichment  
+  * Number of distinct fragments  
+  * Non-redundant fraction (NRF)  
+  * Irreproducible Discovery Rate (IDR) between replicates  
+  * Additional metrics supplied in the QC data  
+* Reviewed QC summaries and plots to identify tissue/species datasets with higher quality.
 
-3. **Validation**
-   - Load candidate BED/peak files
-   - Validate intervals (chromosome, coordinates, width, duplicates, malformed rows)
+### 3. Tissue Selection Based on QC
+* **Pancreas tissue** demonstrated higher data quality across both human and mouse datasets, with:  
+  * Stronger TSS enrichment  
+  * Better fragment periodicity  
+  * More consistent replicates  
+* **Adrenal alternative tissue** was lower quality and deprioritized for cross-species mapping.
 
-4. **QC Metrics**
-   - Compute:
-     - Total intervals
-     - Chromosome distribution
-     - Interval width summary
-     - Duplicate count
-     - Score column summary (if present)
-     - Fraction near promoters (optional, if GTF provided)
+### 4. Outputs
+* QC summary table organized under `results/qc/`.  
+* Markdown QC report summarizing metrics, replicate comparisons, and tissue selection rationale.  
 
-5. **Replicate Comparison (if applicable)**
-   - If multiple adrenal files/replicates are found:
-     - Compare counts
-     - Compute overlap statistics
-     - Write summary table and plots
-   - If not, skip gracefully
-
-6. **Outputs**
-   - Inventory, QC tables, plots, and logs under `results/`
-   - Markdown QC report
-
-## Reproducibility
-- All paths and filenames are configurable
-- No hard-coded filenames
-- Outputs are versioned and organized
-
-See `README.md` and `config/project_config.example.yaml` for setup and usage.
+## Reproducibility and Organization
+* Paths, filenames, and species/tissue choices are configurable via `config/project_config.yaml`.  
+* No hard-coded file paths were used.  
+* All outputs are versioned and organized for transparency and reproducibility.
