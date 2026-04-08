@@ -25,21 +25,20 @@ library(stringr)
 mouse_tss_source <- "mm10"
 human_tss_source <- "hg38"
 
-# 你要跑哪些 ontology
-# GO:BP 最常用；也可以换成 GO:CC / GO:MF
+# ontology
 ontology_to_run <- "GO:BP"
 
-# 输出目录
-outdir <- "/Users/gwen/Desktop/GO/rGREAT_results"
+# make your own output directory
+outdir <- "results/task_4_rgreat"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 # -----------------------------
 # 2. Read BED files
 # -----------------------------
-mouse_specific <- import(file.path("/Users/gwen/Desktop/GO/mouse_specific.bed"))
-human_specific <- import(file.path("/Users/gwen/Desktop/GO/human_specific.bed"))
-conserved_mouse_in_human <- import(file.path("/Users/gwen/Desktop/GO/conserved_mouse_in_human.bed"))
-conserved_human_in_mouse <- import(file.path("/Users/gwen/Desktop/GO/conserved_human_in_mouse.bed"))
+mouse_specific <- import(file.path("/results/mapping/mouse_specific.bed"))
+human_specific <- import(file.path("/results/mapping/human_specific.bed"))
+conserved_mouse_in_human <- import(file.path("/results/mapping/conserved_mouse_in_human.bed"))
+conserved_human_in_mouse <- import(file.path("/results/mapping/conserved_human_in_mouse.bed"))
 
 # -----------------------------
 # 3. Clean helper
@@ -59,13 +58,6 @@ conserved_human_in_mouse <- clean_gr(conserved_human_in_mouse)
 # -----------------------------
 # 4. Build background regions
 # -----------------------------
-# 逻辑：
-# mouse 坐标系分析：mouse_specific + conserved_human_in_mouse
-# human 坐标系分析：human_specific + conserved_mouse_in_human
-#
-# 前提是：
-# conserved_human_in_mouse.bed 已经在 mouse 坐标系
-# conserved_mouse_in_human.bed 已经在 human 坐标系
 
 bg_mouse <- reduce(c(mouse_specific, conserved_human_in_mouse))
 bg_human <- reduce(c(human_specific, conserved_mouse_in_human))
@@ -90,15 +82,6 @@ cat("bg_human width:", sum(width(bg_human)), "\n\n")
 # -----------------------------
 # 6. Run rGREAT
 # -----------------------------
-# great() 是本地 GREAT 的核心函数
-# gene_sets 可直接用 "GO:BP"
-# tss_source 可直接用 "mm10"/"hg38" 等
-# background 可直接传 GRanges
-#
-# 官方文档说明：great() 支持内置 annotations，
-# tss_source 可直接写 genome version，
-# background 可显式设置为 genomic regions.
-# see rGREAT local GREAT docs.
 
 mouse_job <- great(
   gr = mouse_specific,
@@ -120,7 +103,7 @@ human_job <- great(
 mouse_tbl <- getEnrichmentTable(mouse_job)
 human_tbl <- getEnrichmentTable(human_job)
 
-# 保存原始结果
+# save
 write.csv(mouse_tbl,
           file.path(outdir, "mouse_specific_rGREAT_GO_BP.csv"),
           row.names = FALSE)
@@ -137,23 +120,18 @@ cat("\n=== Human result columns ===\n")
 print(colnames(human_tbl))
 cat("\n")
 
-# 常见会有 p_value / p_adjust / fold_enrichment / name / id 等列
-# 为了稳一点，写个自动识别函数
 
 standardize_tbl <- function(tb, label) {
   tb2 <- tb
   
-  # 自动识别 term name 列
   term_col <- intersect(c("name", "term_name", "description"), colnames(tb2))
   if (length(term_col) == 0) stop("Cannot find term name column.")
   term_col <- term_col[1]
   
-  # 自动识别 adjusted p-value 列
   padj_col <- intersect(c("p_adjust", "adj_p_value", "fdr", "q_value"), colnames(tb2))
   if (length(padj_col) == 0) stop("Cannot find adjusted p-value column.")
   padj_col <- padj_col[1]
   
-  # 自动识别 enrichment 列
   enrich_col <- intersect(c("fold_enrichment", "fold_enrichment_binom", "enrichment"), colnames(tb2))
   if (length(enrich_col) == 0) {
     tb2$fold_enrichment_final <- NA_real_
@@ -197,26 +175,23 @@ write.csv(human_sig,
 
 combined_sig <- bind_rows(mouse_sig, human_sig)
 
-# 每个 dataset 取前 10 个 term
+# top10 term
 tb2 <- combined_sig %>%
   group_by(dataset) %>%
   arrange(padj_final, .by_group = TRUE) %>%
   slice_head(n = 10) %>%
   ungroup()
 
-# term 自动换行
 tb2 <- tb2 %>%
   mutate(term_name_final = str_wrap(term_name_final, width = 34))
 
-# 保证顺序
 tb2$dataset <- factor(tb2$dataset, levels = c("mouse_specific", "human_specific"))
 
-# 如果没有 fold enrichment 列，就给默认大小
 if (!"fold_enrichment_final" %in% colnames(tb2)) {
   tb2$fold_enrichment_final <- 1
 }
 
-# 给每个 panel 内单独排序
+
 tb2 <- tb2 %>%
   group_by(dataset) %>%
   mutate(term_plot = factor(term_name_final, levels = rev(unique(term_name_final)))) %>%
